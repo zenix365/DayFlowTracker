@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DayFlow Counter</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #0C0E12;
+            color: #FFFFFF;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+        .progress-container {
+            width: 95vw;
+            max-width: 800px;
+            height: 20px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #3DC985, #2EB37A);
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(61,201,133,0.4);
+            transition: width 0.3s ease;
+        }
+        .progress-text {
+            margin-top: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            color: #FFFFFF;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(36, 1fr);
+            grid-template-rows: repeat(11, 1fr);
+            gap: 2px;
+            max-width: 800px;
+            width: 95vw;
+            max-height: 85vh;
+            padding: 15px;
+            box-sizing: border-box;
+            background: rgba(255,255,255,0.03);
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.06);
+            backdrop-filter: blur(10px);
+        }
+        .dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: transparent;
+            border: 2px solid rgba(255,255,255,0.2);
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            margin: auto;
+        }
+        .dot:hover {
+            border-color: rgba(61,201,133,0.8);
+            transform: scale(1.25);
+        }
+        .dot.completed {
+            background: #3DC985;
+            border-color: #3DC985;
+            box-shadow: 0 0 12px rgba(61,201,133,0.7);
+        }
+        .dot.today {
+            background: #EF4F60;
+            border-color: #EF4F60;
+            box-shadow: 0 0 15px rgba(239,79,96,0.8);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.45); }
+        }
+        @media (max-width: 768px) {
+            .dot {
+                width: 14px;
+                height: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-container">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <div class="progress-text" id="progressText">0%</div>
+    
+    <div class="grid" id="dotGrid"></div>
+
+    <script>
+        let isLeapYear = false;
+        let totalDays = 365;
+        let completedDays = parseInt(localStorage.getItem('completedDays') || '0');
+
+        function getDayOfYear(date) {
+            const start = new Date(date.getFullYear(), 0, 1);
+            const diff = (date - start) / (1000 * 60 * 60 * 24);
+            return Math.floor(diff) + 1;
+        }
+
+        function updateProgress() {
+            const percentage = Math.round((completedDays / totalDays) * 100);
+            document.getElementById('progressBar').style.width = percentage + '%';
+            document.getElementById('progressText').textContent = percentage + '%';
+        }
+
+        function updateDisplay() {
+            const now = new Date();
+            const today = getDayOfYear(now);
+            const todayIndex = Math.min(today - 1, totalDays - 1);
+
+            totalDays = isLeapYear ? 366 : 365;
+
+            const grid = document.getElementById('dotGrid');
+            grid.innerHTML = '';
+            
+            for (let i = 0; i < 396; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'dot';
+                
+                if (i < totalDays) {
+                    dot.onclick = () => toggleDay(i);
+                    
+                    if (i < completedDays) {
+                        dot.classList.add('completed');
+                    }
+                    if (i === todayIndex) {
+                        dot.classList.add('today');
+                    }
+                } else {
+                    dot.style.borderColor = 'transparent';
+                    dot.style.background = 'transparent';
+                    dot.style.cursor = 'default';
+                    dot.style.boxShadow = 'none';
+                }
+                
+                grid.appendChild(dot);
+            }
+            
+            updateProgress();
+        }
+
+        function toggleDay(dayIndex) {
+            const today = getDayOfYear(new Date());
+            if (dayIndex >= today) return;
+
+            if (dayIndex < completedDays) {
+                completedDays = dayIndex;
+            } else {
+                completedDays = dayIndex + 1;
+            }
+            localStorage.setItem('completedDays', completedDays.toString());
+            updateDisplay();
+        }
+
+        function autoMarkPastDays() {
+            const yesterday = getDayOfYear(new Date(Date.now() - 86400000));
+            if (completedDays < yesterday) {
+                completedDays = yesterday;
+                localStorage.setItem('completedDays', completedDays.toString());
+            }
+        }
+
+        autoMarkPastDays();
+        updateDisplay();
+        setInterval(updateDisplay, 60000);
+    </script>
+</body>
+</html>
